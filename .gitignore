@@ -1,6 +1,6 @@
 .kadena/
 node_modules/
-.pc-history/
+.pc-history
 bun.lock
 output.json
 output2.json
