@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@kadena/client": "^1.17.1",
+    "@kadena/kadena-cli": "^1.4.1"
+  }
+}

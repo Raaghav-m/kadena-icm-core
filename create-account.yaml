@@ -1,0 +1,17 @@
+type: exec
+code: |-
+  (coin.create-account "k:ecd64e58388939825051829cc428ea481009f244d3409f66797db44e15bb20f7" (read-keyset "dev-account"))
+data:
+  dev-account:
+    keys: ["ecd64e58388939825051829cc428ea481009f244d3409f66797db44e15bb20f7"]
+    pred: "keys-all"
+sigs:
+  - public: "ecd64e58388939825051829cc428ea481009f244d3409f66797db44e15bb20f7"
+    caps: []
+networkId: development
+publicMeta:
+  chainId: "3"
+  sender: "k:ecd64e58388939825051829cc428ea481009f244d3409f66797db44e15bb20f7"
+  gasLimit: 100000
+  gasPrice: 0.0000001
+  ttl: 7200

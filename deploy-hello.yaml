@@ -1,0 +1,26 @@
+# deploy-hello.yaml
+code: |-
+  (namespace 'free)
+    (module simplemodule GOV
+     (defcap GOV () true)
+     (defconst TEXT:string "Hello World")
+     (defun greet:string () TEXT)
+ )   
+ data:
+  ks: {
+    keys: [DEPLOYER_PUBLIC_KEY],
+    pred: "keys-all"
+  }
+meta:
+  chainId: "{{chain-id}}"
+  sender: "DEPLOYER_ACCOUNT_NAME"
+  gasLimit: 80300
+  gasPrice: 0.000001
+  ttl: 600
+signers:
+  - public: "DEPLOYER_PUBLIC_KEY"
+    caps:
+      - name: "coin.GAS"
+        args: []
+networkId: "{{network-id}}"
+type: exec
