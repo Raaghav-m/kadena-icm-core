@@ -1,7 +1,0 @@
-(begin-tx)
-  (load "helloWorld.pact")
-(commit-tx)
-(begin-tx)
-  (helloWorld-mod.say-hello-to "Las Pistolas")
-  (helloWorld-mod.greet)
-(commit-tx)
