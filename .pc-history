@@ -1,3 +1,4 @@
+help
 (say-hello "Pistolas") 
 (module helloWorld GOVERNANCE    "You can also embed comments in smart contracts by using quoted strings."    (defcap GOVERNANCE () true)      (defun say-hello(name:string)        (format "Hello, {}! ~ from Kadena" [name])    ))
 kadena tx add

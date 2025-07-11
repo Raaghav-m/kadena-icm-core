@@ -1,3 +1,4 @@
+(namespace 'free)
 ;;
 ;; Modified "Hello, world!" module
 ;; 

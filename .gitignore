@@ -3,4 +3,4 @@ node_modules/
 .pc-history
 bun.lock
 output.json
-output2.json
+output2.json    
