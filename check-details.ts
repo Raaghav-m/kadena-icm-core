@@ -1,6 +1,6 @@
 import { Pact, createClient } from '@kadena/client';
 
-const ACCOUNT = 'scaffold2';
+const ACCOUNT = 'w:bj2jgpIjqt0iLcde9Ign9wT2qlu9qpvIBB0v0Aifbow:keys-any';
 const CHAIN_ID = '0';
 const NETWORK_ID = 'development';
 const client = createClient(`http://localhost:8080/chainweb/0.0/${NETWORK_ID}/chain/${CHAIN_ID}/pact`);

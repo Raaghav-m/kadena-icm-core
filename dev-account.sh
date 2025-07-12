@@ -1,5 +1,5 @@
 #!/bin/bash
-ALIAS=${KADENA_ALIAS:-devwallet}
+ALIAS=${KADENA_ALIAS:-acc}
 KEYFILE="$ALIAS.yaml"
 
 if [ ! -f "$KEYFILE" ]; then

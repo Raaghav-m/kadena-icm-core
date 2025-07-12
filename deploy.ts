@@ -10,6 +10,7 @@ import {
   isSignedTransaction,
 } from '@kadena/client';
 import type { ChainId, ICommand } from '@kadena/client';
+import { execSync } from 'child_process';
 
 const argv = yargs(hideBin(process.argv))
   .option('file', { alias: 'f', describe: 'Path to Pact source file', type: 'string' })
@@ -100,4 +101,14 @@ function parseConstructorArgs(code: string): { name: string; type: string }[] {
   const reqKey = await client.submit(signed);
   const res = await client.listen(reqKey);
   console.log(JSON.stringify(res, null, 2));
+
+  // Generate JSON config using script.ts and save beside the Pact file
+  try {
+    const jsonStr = execSync(`ts-node script.ts \"${file}\"`).toString();
+    const outPath = path.basename(file, '.pact') + '.json';
+    fs.writeFileSync(outPath, jsonStr);
+    console.log(`Config saved to ${outPath}`);
+  } catch (err: any) {
+    console.error('Could not generate config JSON:', err.message);
+  }
 })();
