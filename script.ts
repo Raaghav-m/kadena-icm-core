@@ -13,6 +13,7 @@ interface FunctionDef {
   type: 'read' | 'write';
   description: string;
   args: Arg[];
+  caps?: string[];
 }
 
 interface ModuleConfig {
@@ -89,11 +90,17 @@ const generateConfig = (contract: string): ModuleConfig => {
         j++;
       } while (j < lines.length && openParens > 0);
 
+      // detect capabilities required by this function
+      const capMatches = [...block.matchAll(/with-capability\s*\(\s*([\w\.-]+)/g)].map(m => m[1]);
+      const caps = Array.from(new Set(capMatches));
+
+
       functions.push({
         name: fnMeta.name,
         args: fnMeta.args,
         type: inferFunctionType(block),
         description,
+        caps: caps.length ? caps : undefined,
       });
     }
   }

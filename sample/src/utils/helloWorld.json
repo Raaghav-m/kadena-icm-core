@@ -15,7 +15,10 @@
         }
       ],
       "type": "write",
-      "description": ""
+      "description": "",
+      "caps": [
+        "ACCOUNT-OWNER"
+      ]
     },
     {
       "name": "read-message",

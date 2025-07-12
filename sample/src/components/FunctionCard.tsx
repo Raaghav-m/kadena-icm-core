@@ -28,7 +28,8 @@ const FunctionCard: React.FC<Props> = ({ fn, accountRef }) => {
       return;
     }
     try {
-      const res = await callContract(fn.name, inputs, fn.type as 'read' | 'write', account);
+      const capsArr = (fn as any).caps ?? [];
+      const res = await callContract(fn.name, inputs, fn.type as 'read' | 'write', account, capsArr);
       console.log('[result]', res);
       alert(JSON.stringify(res));
     } catch (err: any) {
@@ -49,6 +50,11 @@ const FunctionCard: React.FC<Props> = ({ fn, accountRef }) => {
     >
       <strong>{fn.name}</strong>&nbsp;
       <span style={{ color: '#555' }}>({fn.type})</span>
+      {(fn as any).caps?.length ? (
+        <div style={{ fontSize: '0.75rem', color: '#b00', marginTop: '0.25rem' }}>
+          requires: {(fn as any).caps.join(', ')}
+        </div>
+      ) : null}
       {fn.args.map((a, idx) => (
         <input
           key={idx}

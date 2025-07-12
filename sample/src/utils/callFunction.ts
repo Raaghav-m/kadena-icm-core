@@ -9,6 +9,7 @@ export async function callContract(
   args: string[],
   type: 'read' | 'write',
   account: string,
+  caps: string[] = [],
 ): Promise<any> {
   const argList = args.map((a) => (isNaN(Number(a)) ? `\"${a}\"` : a)).join(' ');
   const code = `(${MODULE_QUALIFIED}.${fnName}${argList ? ' ' + argList : ''})`;
@@ -29,10 +30,19 @@ export async function callContract(
   console.log(account);
   const unsigned = Pact.builder
     .execution(code)
-    .addSigner(pub, (withCap) => [
-      withCap('coin.GAS'),
-      withCap(`${MODULE_QUALIFIED}.ACCOUNT-OWNER`, account),
-    ])
+    .addSigner(pub, (withCap) => {
+      const list = [withCap('coin.GAS')];
+      for (const c of caps) {
+        if (c === 'ACCOUNT-OWNER') {
+          list.push(withCap(`${MODULE_QUALIFIED}.ACCOUNT-OWNER`, account));
+        } else if (c.includes('.')) {
+          list.push(withCap(c));
+        } else {
+          list.push(withCap(`${MODULE_QUALIFIED}.${c}`));
+        }
+      }
+      return list;
+    })
     .setMeta({ chainId: CHAIN_ID, senderAccount: account })
     .setNetworkId(NETWORK_ID)
     .createTransaction();
