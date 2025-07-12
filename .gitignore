@@ -4,3 +4,4 @@ node_modules/
 bun.lock
 output.json
 output2.json    
+.env
