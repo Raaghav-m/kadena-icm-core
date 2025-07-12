@@ -11,6 +11,7 @@ import {
 } from '@kadena/client';
 import type { ChainId, ICommand } from '@kadena/client';
 import { execSync } from 'child_process';
+import { CLIENT_RENEG_LIMIT } from 'tls';
 
 const argv = yargs(hideBin(process.argv))
   .option('file', { alias: 'f', describe: 'Path to Pact source file', type: 'string' })
@@ -34,19 +35,22 @@ async function ensure<T extends keyof typeof argv>(key: T, message: string, def?
   return val as string;
 }
 
-function parseConstructorArgs(code: string): { name: string; type: string }[] {
-  const moduleMatch = code.match(/\(module\s+\w+\s+\w+\s*\(([^)]*)\)/);
-  if (!moduleMatch) return [];
+function parseInitArgs(code: string): { name: string; type: string }[] {
+  const fnMatch = code.match(/\(defun\s+init\s*\(([^)]*)\)/);
+  console.log(fnMatch);
 
-  return moduleMatch[1]
+  if (!fnMatch) return []; // no init function at all
+
+  const argsRaw = fnMatch[1]
     .split(',')
     .map(arg => arg.trim())
-    .filter(Boolean)
-    .map(arg => {
-      const match = arg.match(/(\w+)\s*:\s*([\w\-\.\[\]\{\}]+)/);
-      if (match) return { name: match[1], type: match[2] };
-      else return { name: arg, type: 'unknown' };
-    });
+    .filter(Boolean);
+
+  return argsRaw.map(arg => {
+    const match = arg.match(/(\w+)\s*:\s*([\w\-\.\[\]\{\}]+)/);
+    if (match) return { name: match[1], type: match[2] };
+    return { name: arg, type: 'unknown' };
+  });
 }
 
 (async () => {
@@ -59,56 +63,100 @@ function parseConstructorArgs(code: string): { name: string; type: string }[] {
   const chain = await ensure('chain', 'Chain ID:', '0') as ChainId;
 
   const code = fs.readFileSync(path.resolve(file), 'utf-8');
-  const args = parseConstructorArgs(code);
+  const initArgs = parseInitArgs(code);
 
-  const argInputs: Record<string, string> = {};
-  for (const { name, type } of args) {
+  const userInput: Record<string, string> = {};
+  for (const { name, type } of initArgs) {
     const response = await inquirer.prompt<{ val: string }>({
       type: 'input',
       name: 'val',
       message: `Enter value for constructor arg '${name}' (${type}):`,
     });
-    argInputs[name] = response.val;
+    userInput[name] = response.val;
   }
+  console.log(initArgs.length);
 
-  const moduleAppCall = args.length
-    ? `(${Object.entries(argInputs)
-        .map(([_, val]) => JSON.stringify(val))
-        .join(' ')})`
-    : '';
+  // --- Auto-inject keyset data for any (read-keyset 'ks-name) found ---
+  const keysetMatches = [...code.matchAll(/read-keyset\s+'([\w\-\.]+)/g)];
+  const data: Record<string, any> = {};
+  keysetMatches.forEach(([, ks]) => {
+    if (!data[ks]) {
+      data[ks] = { keys: [pub], pred: 'keys-all' };
+    }
+  });
 
-  const fullCode = code + '\n' + moduleAppCall;
+  const builder = Pact.builder.execution(code);
+for (const [key, value] of Object.entries(data)) {
+  builder.addData(key, value); // 👈 correct usage
+}
+builder.addData('upgrade', false);
 
-  const unsigned = Pact.builder
-    .execution(fullCode)
-    .addSigner(pub, (withCap) => [withCap('coin.GAS')])
+
+  const unsignedDeploy = builder
+    .addSigner(pub, (withCap: any) => [withCap('coin.GAS')])
     .setMeta({
       chainId: chain,
       senderAccount: sender,
-      gasLimit: 15000,
+      gasLimit: 25000,
       gasPrice: 0.0000001,
     })
     .setNetworkId(network)
     .createTransaction();
 
   const signer = createSignWithKeypair({ publicKey: pub, secretKey: priv });
-  const signed = (await signer(unsigned)) as ICommand;
-  if (!isSignedTransaction(signed)) throw new Error('Signing failed');
+  const signedDeploy = await signer(unsignedDeploy);
+  if (!isSignedTransaction(signedDeploy)) throw new Error('Deploy signing failed');
 
   const client = createClient(`${host}/chainweb/0.0/${network}/chain/${chain}/pact`);
+  console.log('\n📦 Deploying module...');
+  const deployReqKey = await client.submit(signedDeploy);
+  const deployRes = await client.listen(deployReqKey);
+  console.log('✅ Module deployed:\n', JSON.stringify(deployRes, null, 2));
 
-  console.log('Submitting deployment...');
-  const reqKey = await client.submit(signed);
-  const res = await client.listen(reqKey);
-  console.log(JSON.stringify(res, null, 2));
+  if (initArgs.length > 0) {
+    const initCode = `(init ${initArgs.map(({ name }) => JSON.stringify(userInput[name])).join(' ')})`;
+    console.log(initCode);
 
-  // Generate JSON config using script.ts and save beside the Pact file
+    const unsignedInit = Pact.builder
+      .execution(initCode)
+      .addSigner(pub, (withCap) => [withCap('coin.GAS')])
+      .setMeta({
+        chainId: chain,
+        senderAccount: sender,
+        gasLimit: 25000,
+        gasPrice: 0.0000001,
+      })
+      .setNetworkId(network)
+      .createTransaction();
+
+    const signedInit = await signer(unsignedInit);
+    if (!isSignedTransaction(signedInit)) throw new Error('Init signing failed');
+
+    console.log('\n🚀 Calling (init ...) with args...');
+    const initReqKey = await client.submit(signedInit);
+    const initRes = await client.listen(initReqKey);
+    console.log('✅ Init result:\n', JSON.stringify(initRes, null, 2));
+  } else {
+    console.log('ℹ️ No (init) function found or it takes no arguments — skipping init call.');
+  }
+
   try {
     const jsonStr = execSync(`ts-node script.ts \"${file}\"`).toString();
     const outPath = path.basename(file, '.pact') + '.json';
     fs.writeFileSync(outPath, jsonStr);
-    console.log(`Config saved to ${outPath}`);
+    console.log(`📝 Config saved to ${outPath}`);
+
+    // ---- Copy to Next.js frontend utils folder as helloWorld.json ----
+    try {
+      const frontendUtilsDir = path.resolve(process.cwd(), 'sample', 'src', 'utils');
+      fs.mkdirSync(frontendUtilsDir, { recursive: true });
+      const destPath = path.join(frontendUtilsDir, 'helloWorld.json');
+      fs.writeFileSync(destPath, jsonStr);
+      console.log(`📤 Copied config to ${path.relative(process.cwd(), destPath)}`);
+    } catch (copyErr: any) {
+      console.error('❌ Failed to write config into frontend:', copyErr.message);
+    }
   } catch (err: any) {
-    console.error('Could not generate config JSON:', err.message);
+    console.error('❌ Failed to generate config JSON:', err.message);
   }
 })();

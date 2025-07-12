@@ -1,5 +1,8 @@
 import { Pact, createClient, isSignedTransaction, createSignWithKeypair } from '@kadena/client';
 import { API_HOST, CHAIN_ID, NETWORK_ID, DEV_PUB_KEY, DEV_PRIVATE_KEY } from './constsLocal';
+import contractConfig from './helloWorld.json';
+
+const MODULE_QUALIFIED = `${contractConfig.namespace}.${contractConfig.module}`;
 
 export async function callContract(
   fnName: string,
@@ -8,7 +11,7 @@ export async function callContract(
   account: string,
 ): Promise<any> {
   const argList = args.map((a) => (isNaN(Number(a)) ? `\"${a}\"` : a)).join(' ');
-  const code = `(free.hi-module.${fnName} ${argList})`;
+  const code = `(${MODULE_QUALIFIED}.${fnName}${argList ? ' ' + argList : ''})`;
 
   if (type === 'read') {
     const unsigned = Pact.builder
@@ -22,13 +25,18 @@ export async function callContract(
     throw res.result.error;
   }
   // write
-  const pub = account.includes(':') ? account.split(':')[1] : DEV_PUB_KEY;
+  const pub =DEV_PUB_KEY;
+  console.log(account);
   const unsigned = Pact.builder
     .execution(code)
-    .addSigner(pub, (withCap) => [withCap('coin.GAS')])
+    .addSigner(pub, (withCap) => [
+      withCap('coin.GAS'),
+      withCap(`${MODULE_QUALIFIED}.ACCOUNT-OWNER`, account),
+    ])
     .setMeta({ chainId: CHAIN_ID, senderAccount: account })
     .setNetworkId(NETWORK_ID)
     .createTransaction();
+  console.log(unsigned);
   const signer = createSignWithKeypair({ publicKey: pub, secretKey: DEV_PRIVATE_KEY });
   const signed = await signer(unsigned);
   if (!isSignedTransaction(signed)) throw new Error('sign failed');
