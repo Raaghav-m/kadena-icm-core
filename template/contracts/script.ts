@@ -174,12 +174,16 @@ const generateConfig = (contract: string): ModuleConfig => {
     if (line.includes("(defun")) {
       // Check if this function is commented out
       if (isFunctionCommented(lines, i)) {
-        console.log(`Skipping commented function at line ${i + 1}`);
         continue;
       }
 
       const fnMeta = parseFunctionLine(line);
       if (!fnMeta) continue;
+
+      // Skip init function
+      if (fnMeta.name === "init") {
+        continue;
+      }
 
       const description = extractDescription(lines, i);
 

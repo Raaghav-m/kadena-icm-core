@@ -1,16 +1,39 @@
 {
-  "dependencies": {
-    "@kadena/client": "^1.17.1",
-    "@kadena/kadena-cli": "^1.4.1",
-    "@types/inquirer": "^9.0.4",
-    "@types/yargs": "^17.0.24",
-    "inquirer": "^12.7.0",
-    "yargs": "^18.0.0"
+  "name": "create-kadena",
+  "version": "1.0.0",
+  "description": "Scaffold Kadena Dapp with frontend, scripts, and contracts",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "create-kadena": "./dist/index.js"
   },
+  "files": [
+    "dist/",
+    "template/",
+    "package.json",
+    "README.md"
+  ],
   "scripts": {
-    "start-chain": "sh ./start-devnet.sh",
-    "dev-account": "sh ./dev-account.sh",
-    "deploy": "ts-node deploy.ts",
-    "stop-chain": "sh ./stop-devnet.sh"
-  }
+    "build": "tsup bin/index.ts --out-dir dist --format esm && cp -r template dist/",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "fs-extra": "^11.2.0",
+    "inquirer": "^9.2.7"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/inquirer": "^9.0.8",
+    "@types/node": "^24.0.14",
+    "tsup": "^8.5.0",
+    "typescript": "^5.4.5"
+  },
+  "keywords": [
+    "kadena",
+    "dapp",
+    "scaffold",
+    "create",
+    "cli"
+  ],
+  "license": "MIT"
 }

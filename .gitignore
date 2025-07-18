@@ -1,7 +1,16 @@
-.kadena/
+# Node.js
 node_modules/
-.pc-history
-bun.lock
-output.json
-output2.json    
+dist/
+.cache/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
 .env

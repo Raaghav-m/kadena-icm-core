@@ -79,24 +79,6 @@ function loadAccountConfig(accountPath: string): AccountConfig {
   }
 }
 
-function parseInitArgs(code: string): { name: string; type: string }[] {
-  const fnMatch = code.match(/\(defun\s+init\s*\(([^)]*)\)/);
-  console.log(fnMatch);
-
-  if (!fnMatch) return []; // no init function at all
-
-  const argsRaw = fnMatch[1]
-    .split(",")
-    .map((arg) => arg.trim())
-    .filter(Boolean);
-
-  return argsRaw.map((arg) => {
-    const match = arg.match(/(\w+)\s*:\s*([\w\-\.\[\]\{\}]+)/);
-    if (match) return { name: match[1], type: match[2] };
-    return { name: arg, type: "unknown" };
-  });
-}
-
 (async () => {
   const file = await ensure("file", "Pact file path:");
   const accountPath = await ensure(
@@ -109,7 +91,6 @@ function parseInitArgs(code: string): { name: string; type: string }[] {
   let accountConfig: AccountConfig;
   try {
     accountConfig = loadAccountConfig(accountPath);
-    console.log(`✅ Loaded account config from ${accountPath}`);
   } catch (error: any) {
     console.error(`❌ ${error.message}`);
     process.exit(1);
@@ -128,29 +109,18 @@ function parseInitArgs(code: string): { name: string; type: string }[] {
   const chain = (await ensure("chain", "Chain ID:", "0")) as ChainId;
 
   const code = fs.readFileSync(path.resolve(file), "utf-8");
-  const initArgs = parseInitArgs(code);
-
-  const userInput: Record<string, string> = {};
-  for (const { name, type } of initArgs) {
-    const response = await inquirer.prompt<{ val: string }>({
-      type: "input",
-      name: "val",
-      message: `Enter value for constructor arg '${name}' (${type}):`,
-    });
-    userInput[name] = response.val;
-  }
-  console.log(initArgs.length);
 
   // --- Auto-inject keyset data for any (read-keyset 'ks-name) found ---
   const keysetMatches = [
     ...code.matchAll(/read-keyset\s+(?:'|")([\w\-\.]+)(?:'|")/g),
   ];
-  console.log(code);
-  console.log(keysetMatches);
   const data: Record<string, any> = {};
   keysetMatches.forEach(([, ks]) => {
-    if (!data[ks]) {
-      data[ks] = { keys: [pub], pred: "keys-all" };
+    // ✅ Always provide both full and short keyset names
+    data[ks] = { keys: [pub], pred: "keys-all" };
+    const short = ks.split(".").pop();
+    if (short && !data[short]) {
+      data[short] = { keys: [pub], pred: "keys-all" };
     }
   });
 
@@ -184,36 +154,6 @@ function parseInitArgs(code: string): { name: string; type: string }[] {
   const deployRes = await client.listen(deployReqKey);
   console.log("✅ Module deployed:\n", JSON.stringify(deployRes, null, 2));
 
-  if (initArgs.length > 0) {
-    const initCode = `(init ${initArgs.map(({ name }) => JSON.stringify(userInput[name])).join(" ")})`;
-    console.log(initCode);
-
-    const unsignedInit = Pact.builder
-      .execution(initCode)
-      .addSigner(pub, (withCap) => [withCap("coin.GAS")])
-      .setMeta({
-        chainId: chain,
-        senderAccount: sender,
-        gasLimit: 25000,
-        gasPrice: 0.0000001,
-      })
-      .setNetworkId(network)
-      .createTransaction();
-
-    const signedInit = await signer(unsignedInit);
-    if (!isSignedTransaction(signedInit))
-      throw new Error("Init signing failed");
-
-    console.log("\n🚀 Calling (init ...) with args...");
-    const initReqKey = await client.submit(signedInit);
-    const initRes = await client.listen(initReqKey);
-    console.log("✅ Init result:\n", JSON.stringify(initRes, null, 2));
-  } else {
-    console.log(
-      "ℹ️ No (init) function found or it takes no arguments — skipping init call."
-    );
-  }
-
   try {
     const jsonStr = execSync(`ts-node script.ts \"${file}\"`).toString();
     const outPath = path.basename(file, ".pact") + ".json";
@@ -224,7 +164,8 @@ function parseInitArgs(code: string): { name: string; type: string }[] {
     try {
       const frontendUtilsDir = path.resolve(
         process.cwd(),
-        "sample",
+        "..",
+        "frontend",
         "src",
         "utils"
       );

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { callContract } from '../utils/callFunction';
-import type contractConfig from '../utils/helloWorld.json';
+import type contractConfig from '../utils/contractConfig.json';
 
 export type ContractFunction = (typeof contractConfig.functions)[number];
 
