@@ -1,0 +1,21 @@
+{
+  "name": "kadena-hack",
+  "module": "index.ts",
+  "type": "commonjs",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:chain1": "hardhat run scripts/deploy.js --network kadenaChain1",
+    "deploy:chain2": "hardhat run scripts/deploy.js --network kadenaChain2",
+    "relayer": "node scripts/relayer.js",
+    "deploy:local": "hardhat run scripts/deploy-local.js --network localChain1",
+    "test:local": "hardhat run scripts/test-local.js --network localChain2"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@types/bun": "^1.2.22",
+    "dotenv": "^17.2.2",
+    "ethers": "^6.15.0",
+    "hardhat": "^3.0.6"
+  }
+}

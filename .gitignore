@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+lib/
+
+# Environment variables
+.env
+env.local
+
+# Build artifacts
+cache/
+out/
+broadcast/
+
+# Lock files
+bun.lock
+foundry.lock
+
+# IDE
+.vscode/
+.idea/
+
+# Misc
+.DS_Store
