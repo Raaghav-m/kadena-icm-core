@@ -1,23 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./interfaces/IMessageReceiver.sol";
+interface IMessageReceiver {
+    event MessageReceived(
+        address indexed sender,      // Original sender from source chain
+        uint256 indexed srcChainId,  // Source chain ID
+        bytes data,                  // Message data
+        uint256 nonce               // Message nonce for replay protection
+    );
 
-contract MessageReceiver is IMessageReceiver {
-    // srcChainId => nonce => processed
-    mapping(uint256 => mapping(uint256 => bool)) public processedMessages;
-    
+    // Function that the relayer will call directly
     function receiveMessage(
         uint256 srcChainId,
+        address srcAddress,  // Original sender address from source chain
         bytes calldata data,
         uint256 nonce
-    ) external {
-        require(
-            !processedMessages[srcChainId][nonce],
-            "Message already processed"
-        );
-        
-        processedMessages[srcChainId][nonce] = true;
-        emit MessageReceived(msg.sender, srcChainId, data, nonce);
-    }
+    ) external;
 } 

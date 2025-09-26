@@ -6,8 +6,12 @@ import "./interfaces/IMessageSender.sol";
 contract MessageSender is IMessageSender {
     uint256 public nonce;
     
-    function sendMessage(uint256 dstChainId, bytes calldata data) external {
-        emit MessageSent(msg.sender, dstChainId, data, nonce);
+    function sendMessage(
+        uint256 dstChainId,
+        address dstAddress,
+        bytes calldata data
+    ) external {
+        emit MessageSent(msg.sender, dstChainId, dstAddress, data, nonce);
         nonce++;
     }
 } 

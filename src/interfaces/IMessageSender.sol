@@ -5,10 +5,14 @@ interface IMessageSender {
     event MessageSent(
         address indexed sender,
         uint256 indexed dstChainId,
+        address indexed dstAddress,  // Address of the receiving contract
         bytes data,
         uint256 nonce
     );
-    
-    function nonce() external view returns (uint256);
-    function sendMessage(uint256 dstChainId, bytes calldata data) external;
+
+    function sendMessage(
+        uint256 dstChainId,
+        address dstAddress,  // Address that should receive the message
+        bytes calldata data
+    ) external;
 } 

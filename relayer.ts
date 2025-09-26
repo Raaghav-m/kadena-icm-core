@@ -28,16 +28,8 @@ const chainConfig2 = {
   rpcUrls: { default: { http: [CHAIN2_RPC] } },
 } as const;
 
-// Contract addresses
-const CHAIN1 = {
-  messageSender: "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const,
-  messageReceiver: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as const,
-};
-
-const CHAIN2 = {
-  messageSender: "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const,
-  messageReceiver: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512" as const,
-};
+// Contract addresses - we only need the MessageSender address on Chain 1
+const CHAIN1_SENDER = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const;
 
 // Create clients
 const chain1 = createPublicClient({
@@ -61,11 +53,7 @@ console.log("\n=== Simple Cross-Chain Relayer ===");
 console.log("Watching Chain 1:", CHAIN1_RPC);
 console.log("Relaying to Chain 2:", CHAIN2_RPC);
 console.log("Relayer Address:", account.address);
-console.log("\nContract Addresses:");
-console.log("Chain 1:");
-console.log("- MessageSender:", CHAIN1.messageSender);
-console.log("Chain 2:");
-console.log("- MessageReceiver:", CHAIN2.messageReceiver);
+console.log("\nWatching MessageSender:", CHAIN1_SENDER);
 console.log("================================\n");
 
 // Keep track of the last block we processed
@@ -107,9 +95,9 @@ async function processNewEvents() {
 
     // Get events from last processed block to current
     const events = await chain1.getLogs({
-      address: CHAIN1.messageSender,
+      address: CHAIN1_SENDER,
       event: parseAbiItem(
-        "event MessageSent(address indexed sender, uint256 indexed dstChainId, bytes data, uint256 nonce)"
+        "event MessageSent(address indexed sender, uint256 indexed dstChainId, address indexed dstAddress, bytes data, uint256 nonce)"
       ),
       fromBlock: lastProcessedBlock + 1n,
       toBlock: currentBlock,
@@ -123,6 +111,7 @@ async function processNewEvents() {
     for (const event of events) {
       if (
         !event.args?.dstChainId ||
+        !event.args?.dstAddress ||
         !event.args?.data ||
         !event.args?.nonce ||
         !event.args?.sender
@@ -131,11 +120,12 @@ async function processNewEvents() {
         continue;
       }
 
-      const { sender, dstChainId, data, nonce } = event.args;
+      const { sender, dstChainId, dstAddress, data, nonce } = event.args;
 
       console.log("\n🔔 New message detected on Chain 1:");
       console.log("From:", sender);
       console.log("To Chain:", dstChainId.toString());
+      console.log("To Contract:", dstAddress);
       console.log("Data:", data);
       console.log("Nonce:", nonce.toString());
       console.log("Block:", event.blockNumber);
@@ -144,18 +134,20 @@ async function processNewEvents() {
         // Send to Chain 2
         console.log("\n📤 Relaying message to Chain 2...");
 
-        // First check if the receiver contract exists
+        // First check if the destination contract exists
         const code = await chain2.getBytecode({
-          address: CHAIN2.messageReceiver,
+          address: dstAddress,
         });
         if (!code) {
-          console.error("❌ MessageReceiver contract not found on Chain 2!");
+          console.error(
+            `❌ Destination contract not found at ${dstAddress} on Chain 2!`
+          );
           continue;
         }
 
         // Check if message was already processed
         const isProcessed = await chain2.readContract({
-          address: CHAIN2.messageReceiver,
+          address: dstAddress,
           abi: [
             {
               name: "processedMessages",
@@ -178,13 +170,14 @@ async function processNewEvents() {
         }
 
         const hash = await wallet.writeContract({
-          address: CHAIN2.messageReceiver,
+          address: dstAddress,
           abi: [
             {
               name: "receiveMessage",
               type: "function",
               inputs: [
                 { name: "srcChainId", type: "uint256" },
+                { name: "srcAddress", type: "address" },
                 { name: "data", type: "bytes" },
                 { name: "nonce", type: "uint256" },
               ],
@@ -193,7 +186,7 @@ async function processNewEvents() {
             },
           ],
           functionName: "receiveMessage",
-          args: [BigInt(1), data, nonce],
+          args: [BigInt(1), sender, data, nonce],
           chain: chainConfig2,
         });
 
