@@ -2,7 +2,7 @@ import {
   createPublicClient,
   createWalletClient,
   http,
-  parseAbiItem,
+  decodeEventLog,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
@@ -29,7 +29,46 @@ const chainConfig2 = {
 } as const;
 
 // Contract addresses - we only need the MessageSender address on Chain 1
-const CHAIN1_SENDER = "0x5FbDB2315678afecb367f032d93F642f64180aa3" as const;
+const CHAIN1_SENDER = "0xa82fF9aFd8f496c3d6ac40E2a0F282E47488CFc9" as const;
+
+// Event ABI
+const messageSentEventAbi = {
+  anonymous: false,
+  inputs: [
+    {
+      indexed: true,
+      internalType: "address",
+      name: "sender",
+      type: "address",
+    },
+    {
+      indexed: true,
+      internalType: "uint256",
+      name: "dstChainId",
+      type: "uint256",
+    },
+    {
+      indexed: true,
+      internalType: "address",
+      name: "dstAddress",
+      type: "address",
+    },
+    {
+      indexed: false,
+      internalType: "bytes",
+      name: "data",
+      type: "bytes",
+    },
+    {
+      indexed: false,
+      internalType: "uint256",
+      name: "nonce",
+      type: "uint256",
+    },
+  ],
+  name: "MessageSent",
+  type: "event",
+} as const;
 
 // Create clients
 const chain1 = createPublicClient({
@@ -94,43 +133,36 @@ async function processNewEvents() {
     );
 
     // Get events from last processed block to current
-    const events = await chain1.getLogs({
+    const logs = await chain1.getLogs({
       address: CHAIN1_SENDER,
-      event: parseAbiItem(
-        "event MessageSent(address indexed sender, uint256 indexed dstChainId, address indexed dstAddress, bytes data, uint256 nonce)"
-      ),
+      events: [messageSentEventAbi],
       fromBlock: lastProcessedBlock + 1n,
       toBlock: currentBlock,
     });
 
-    if (events.length > 0) {
-      console.log("📨 Found", events.length, "new messages");
+    if (logs.length > 0) {
+      console.log("📨 Found", logs.length, "new messages");
     }
 
     // Process each event
-    for (const event of events) {
-      if (
-        !event.args?.dstChainId ||
-        !event.args?.dstAddress ||
-        !event.args?.data ||
-        !event.args?.nonce ||
-        !event.args?.sender
-      ) {
-        console.log("⚠️ Skipping event with missing args");
-        continue;
-      }
-
-      const { sender, dstChainId, dstAddress, data, nonce } = event.args;
-
-      console.log("\n🔔 New message detected on Chain 1:");
-      console.log("From:", sender);
-      console.log("To Chain:", dstChainId.toString());
-      console.log("To Contract:", dstAddress);
-      console.log("Data:", data);
-      console.log("Nonce:", nonce.toString());
-      console.log("Block:", event.blockNumber);
-
+    for (const log of logs) {
       try {
+        const event = decodeEventLog({
+          abi: [messageSentEventAbi],
+          data: log.data,
+          topics: log.topics,
+        });
+
+        const { sender, dstChainId, dstAddress, data, nonce } = event.args;
+
+        console.log("\n🔔 New message detected on Chain 1:");
+        console.log("From:", sender);
+        console.log("To Chain:", dstChainId.toString());
+        console.log("To Contract:", dstAddress);
+        console.log("Data:", data);
+        console.log("Nonce:", nonce.toString());
+        console.log("Block:", log.blockNumber);
+
         // Send to Chain 2
         console.log("\n📤 Relaying message to Chain 2...");
 
@@ -176,8 +208,8 @@ async function processNewEvents() {
               name: "receiveMessage",
               type: "function",
               inputs: [
-                { name: "srcChainId", type: "uint256" },
                 { name: "srcAddress", type: "address" },
+                { name: "srcChainId", type: "uint256" },
                 { name: "data", type: "bytes" },
                 { name: "nonce", type: "uint256" },
               ],
@@ -186,7 +218,7 @@ async function processNewEvents() {
             },
           ],
           functionName: "receiveMessage",
-          args: [BigInt(1), sender, data, nonce],
+          args: [sender, BigInt(1), data, nonce],
           chain: chainConfig2,
         });
 
