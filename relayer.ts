@@ -7,8 +7,8 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 
 // Configuration
-const CHAIN1_RPC = "http://localhost:9545";
-const CHAIN2_RPC = "http://localhost:9546";
+const CHAIN1_RPC = "http://localhost:8545";
+const CHAIN2_RPC = "http://localhost:8546";
 const PRIVATE_KEY =
   "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
 const POLL_INTERVAL = 2000; // Poll every 2 seconds
