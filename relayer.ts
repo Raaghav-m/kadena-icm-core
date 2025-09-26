@@ -7,29 +7,31 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 
 // Configuration
-const CHAIN1_RPC = "http://localhost:8545";
-const CHAIN2_RPC = "http://localhost:8546";
+const CHAIN1_RPC =
+  "https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/20/evm/rpc";
+const CHAIN2_RPC =
+  "https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/21/evm/rpc";
 const PRIVATE_KEY =
-  "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" as const;
+  "0xb7b00c1254db5fc6e025606c78ff1803c9b452d6194822fbef7b0d6762e617f5" as const;
 const POLL_INTERVAL = 2000; // Poll every 2 seconds
 
 // Chain configuration
 const chainConfig1 = {
-  id: 31337,
-  name: "Local Chain",
-  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+  id: 5920,
+  name: "Kadena Testnet 1",
+  nativeCurrency: { name: "KDA", symbol: "KDA", decimals: 18 },
   rpcUrls: { default: { http: [CHAIN1_RPC] } },
 } as const;
 
 const chainConfig2 = {
-  id: 31337,
-  name: "Local Chain",
-  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+  id: 5921,
+  name: "Kadena Testnet 2",
+  nativeCurrency: { name: "KDA", symbol: "KDA", decimals: 18 },
   rpcUrls: { default: { http: [CHAIN2_RPC] } },
 } as const;
 
 // Contract addresses - we only need the MessageSender address on Chain 1
-const CHAIN1_SENDER = "0xa82fF9aFd8f496c3d6ac40E2a0F282E47488CFc9" as const;
+const CHAIN1_SENDER = "0x31f1bDB782e971256C2aEC2a29A6DfeD13F91DF6" as const;
 
 // Event ABI
 const messageSentEventAbi = {
@@ -88,6 +90,34 @@ const wallet = createWalletClient({
   chain: chainConfig2,
 });
 
+// Maximum blocks per RPC request
+const MAX_BLOCK_RANGE = 100_000n;
+
+// Function to get logs in chunks to avoid RPC limits
+async function getLogsInChunks(fromBlock: bigint, toBlock: bigint) {
+  let logs: any[] = [];
+  let start = fromBlock;
+
+  while (start <= toBlock) {
+    const end =
+      start + MAX_BLOCK_RANGE - 1n > toBlock
+        ? toBlock
+        : start + MAX_BLOCK_RANGE - 1n;
+
+    const chunkLogs = await chain1.getLogs({
+      address: CHAIN1_SENDER,
+      events: [messageSentEventAbi],
+      fromBlock: start,
+      toBlock: end,
+    });
+
+    logs = logs.concat(chunkLogs);
+    start = end + 1n;
+  }
+
+  return logs;
+}
+
 console.log("\n=== Simple Cross-Chain Relayer ===");
 console.log("Watching Chain 1:", CHAIN1_RPC);
 console.log("Relaying to Chain 2:", CHAIN2_RPC);
@@ -133,12 +163,7 @@ async function processNewEvents() {
     );
 
     // Get events from last processed block to current
-    const logs = await chain1.getLogs({
-      address: CHAIN1_SENDER,
-      events: [messageSentEventAbi],
-      fromBlock: lastProcessedBlock + 1n,
-      toBlock: currentBlock,
-    });
+    const logs = await getLogsInChunks(lastProcessedBlock + 1n, currentBlock);
 
     if (logs.length > 0) {
       console.log("📨 Found", logs.length, "new messages");
