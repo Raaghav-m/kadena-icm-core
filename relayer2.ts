@@ -17,30 +17,29 @@ if (!process.env.PRIVATE_KEY) {
 
 // Configuration
 const CHAIN1_RPC =
-  "https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/20/evm/rpc";
-const CHAIN2_RPC =
   "https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/21/evm/rpc";
+const CHAIN2_RPC =
+  "https://evm-testnet.chainweb.com/chainweb/0.0/evm-testnet/chain/20/evm/rpc";
 const POLL_INTERVAL = 2000; // Poll every 2 seconds
 const MAX_BLOCK_RANGE = 1000n; // Max blocks per RPC query - reduced to avoid timeouts
 
 // Chain configuration
 const chainConfig1 = {
-  id: 5920,
-  name: "Kadena Chain 20",
+  id: 5921,
+  name: "Kadena Chain 21",
   nativeCurrency: { name: "KDA", symbol: "KDA", decimals: 18 },
   rpcUrls: { default: { http: [CHAIN1_RPC] } },
 } as const;
 
 const chainConfig2 = {
-  id: 5921,
-  name: "Kadena Chain 21",
+  id: 5920,
+  name: "Kadena Chain 20",
   nativeCurrency: { name: "KDA", symbol: "KDA", decimals: 18 },
   rpcUrls: { default: { http: [CHAIN2_RPC] } },
 } as const;
 
 // Contract addresses for both chains
-const CHAIN1_SENDER = "0x31f1bDB782e971256C2aEC2a29A6DfeD13F91DF6" as const;
-const CHAIN2_RECEIVER = "0x31f1bDB782e971256C2aEC2a29A6DfeD13F91DF6" as const;
+const CHAIN1_SENDER = "0xF95c11D596b1650f11336D33E318475Dc1e21472" as const;
 
 // Create clients
 const chain1 = createPublicClient({
@@ -65,7 +64,6 @@ console.log("Watching Chain 20:", CHAIN1_RPC);
 console.log("Relaying to Chain 21:", CHAIN2_RPC);
 console.log("Relayer Address:", account.address);
 console.log("\nWatching MessageSender:", CHAIN1_SENDER);
-console.log("Destination Receiver:", CHAIN2_RECEIVER);
 console.log("================================\n");
 
 // Keep track of the last block we processed

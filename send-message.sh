@@ -3,9 +3,10 @@
 # Load contract addresses from deployment.json
 CHAIN1_APP=$(cat deployments/deployment.json | jq -r '.chain1.Contracts.exampleApp')
 CHAIN2_APP=$(cat deployments/deployment.json | jq -r '.chain2.Contracts.exampleApp')
+CHAIN1_SENDER=$(cat deployments/deployment.json | jq -r '.chain1.Contracts.messageSender')
+
 echo "CHAIN1_APP: $CHAIN1_APP"
 echo "CHAIN2_APP: $CHAIN2_APP"
-CHAIN1_SENDER=$(cat deployments/deployment.json | jq -r '.chain1.Contracts.messageSender')
 echo "CHAIN1_SENDER: $CHAIN1_SENDER"
 
 echo -e "\n=== Sending Cross-Chain Message ==="
@@ -18,6 +19,10 @@ echo "Message: 'hey there'"
 CURRENT_NONCE=$(cast call $CHAIN1_SENDER "nonce()(uint256)" --rpc-url http://localhost:8545)
 echo "Current nonce: $CURRENT_NONCE"
 
+# Get required fee
+FEE=$(cast call $CHAIN1_SENDER "messageFee()(uint256)" --rpc-url http://localhost:8545)
+echo "Required fee: $FEE wei"
+
 # Send message from Chain 1
 echo -e "\nSending message from Chain 1..."
 TX_HASH=$(cast send $CHAIN1_APP \
@@ -25,6 +30,7 @@ TX_HASH=$(cast send $CHAIN1_APP \
   2 \
   $CHAIN2_APP \
   "hey there" \
+  --value $FEE \
   --rpc-url http://localhost:8545 \
   --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80)
 

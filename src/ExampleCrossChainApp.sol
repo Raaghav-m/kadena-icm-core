@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import "./interfaces/IMessageReceiver.sol";
 import "./MessageSender.sol";
-import "./MessageReceiver.sol";
 
 contract ExampleCrossChainApp is IMessageReceiver {
     MessageSender public immutable messageSender;
@@ -30,8 +30,8 @@ contract ExampleCrossChainApp is IMessageReceiver {
     
     // Function that the relayer calls directly
     function receiveMessage(
-        uint256 srcChainId,
         address srcAddress,
+        uint256 srcChainId,
         bytes calldata data,
         uint256 nonce
     ) external {
