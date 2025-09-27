@@ -73,6 +73,12 @@ let lastProcessedBlock = 0n;
 let isProcessing = false;
 let heartbeatCount = 0;
 
+// Initialize last processed block to current block
+async function initializeBlockNumber() {
+  lastProcessedBlock = await chain1.getBlockNumber();
+  console.log("Starting from block:", lastProcessedBlock.toString());
+}
+
 // Function to process new events
 async function processNewEvents() {
   if (isProcessing) return;
@@ -221,5 +227,8 @@ async function processNewEvents() {
   }
 }
 
+// Initialize and start polling
 console.log("🔄 Starting event polling...");
-setInterval(processNewEvents, POLL_INTERVAL);
+initializeBlockNumber().then(() => {
+  setInterval(processNewEvents, POLL_INTERVAL);
+});
