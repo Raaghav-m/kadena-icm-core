@@ -13,8 +13,13 @@ contract NFTReceiver is ERC721URIStorage, IMessageReceiver {
     
     // Mapping to track original token IDs from source chain
     mapping(uint256 => uint256) public sourceToLocalTokenId;
+
+    // Immutable authorized relayer
+    address public immutable authorizedRelayer;
     
-    constructor() ERC721("CrossChainNFT", "CCNFT") {
+    constructor(address _relayer) ERC721("CrossChainNFT", "CCNFT") {
+        require(_relayer != address(0), "Invalid relayer address");
+        authorizedRelayer = _relayer;
         _nextTokenId = 1; // Start from 1 to avoid using 0
     }
 
@@ -32,6 +37,11 @@ contract NFTReceiver is ERC721URIStorage, IMessageReceiver {
         bytes calldata data,
         uint256 nonce
     ) external {
+        // Only authorized relayer can call this function
+        require(msg.sender == authorizedRelayer, "Not authorized relayer");
+        //future implementation of proof verification
+         require(verifyProof(data), "Invalid proof");
+        
         // Verify message hasn't been processed
         require(!processedMessages[srcChainId][nonce], "Message already processed");
         
@@ -72,5 +82,10 @@ contract NFTReceiver is ERC721URIStorage, IMessageReceiver {
         
         // Emit the received event
         emit MessageReceived(srcAddress, srcChainId, data, nonce);
+    }
+
+    function verifyProof(bytes memory data) public view returns (bool) {
+        //future implementation of proof verification
+        return true;
     }
 }

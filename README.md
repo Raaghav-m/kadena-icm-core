@@ -18,6 +18,8 @@ MessageSender: 0x0e29239308015DD57e215DF3610B7d9d8231B976
 NFTReceiver: 0x098F11AfD4c818B119906D8f46D7DBa9C8058ceb
 ```
 
+![Cross-Chain Flow Diagram](./flow.png)
+
 ## Examples
 
 ### 1. Simple Message Passing
