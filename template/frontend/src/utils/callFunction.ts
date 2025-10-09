@@ -19,22 +19,67 @@ if (!DEV_PUB_KEY || !DEV_PRIVATE_KEY) {
   );
 }
 
+function formatPactArg(value: string, type: string): string {
+  // Handle array types like [string], [integer], etc.
+  if (type.startsWith('[')) {
+    // Parse comma-separated values
+    const items = value
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+    
+    // Determine the inner type (e.g., "string" from "[string]")
+    const innerType = type.slice(1, -1); // Remove [ and ]
+    
+    // Format each item based on inner type
+    const formattedItems = items.map((item) => {
+      if (innerType === 'string') {
+        return `"${item}"`;
+      } else if (innerType === 'integer' || innerType === 'decimal') {
+        return item;
+      } else {
+        // Default: treat as string
+        return `"${item}"`;
+      }
+    });
+    
+    return `[${formattedItems.join(' ')}]`;
+  }
+  
+  // Handle non-array types
+  if (type === 'integer' || type === 'decimal') {
+    return value;
+  }
+  
+  // Default: treat as string
+  return `"${value}"`;
+}
+
 export async function callContract(
   fnName: string,
   args: string[],
+  argTypes: string[],
   type: 'read' | 'write',
   account: string,
   caps: string[] = [],
 ): Promise<any> {
+  console.log('[callContract] fnName:', fnName);
+  console.log('[callContract] args array:', args);
+  console.log('[callContract] args length:', args.length);
+  console.log('[callContract] argTypes:', argTypes);
+  
   const argList = args
-    .map((a) => (isNaN(Number(a)) ? `\"${a}\"` : a))
+    .map((arg, idx) => formatPactArg(arg, argTypes[idx] || 'string'))
     .join(' ');
   const code = `(${MODULE_QUALIFIED}.${fnName}${argList ? ' ' + argList : ''})`;
+  
+  console.log('[callContract] formatted argList:', argList);
+  console.log('[callContract] final Pact code:', code);
 
   if (type === 'read') {
     const unsigned = Pact.builder
       .execution(code)
-      .setMeta({ chainId: CHAIN_ID })
+      .setMeta({ chainId: CHAIN_ID,gasLimit: 4000000000 })
       .setNetworkId(NETWORK_ID)
       .createTransaction();
     const client = createClient(API_HOST);
@@ -66,6 +111,7 @@ export async function callContract(
     .setMeta({
       chainId: CHAIN_ID,
       senderAccount: account,
+      gasLimit: 150000,
     })
     .setNetworkId(NETWORK_ID)
     .createTransaction();

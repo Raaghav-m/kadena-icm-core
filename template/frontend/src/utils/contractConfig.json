@@ -1,28 +1,5 @@
 {
   "namespace": "free",
-  "module": "cka-message-store-v1",
-  "functions": [
-    {
-      "name": "write-message",
-      "args": [
-        {
-          "name": "account",
-          "type": "string"
-        },
-        {
-          "name": "message",
-          "type": "string"
-        }
-      ],
-      "type": "write",
-      "description": "",
-      "caps": ["ACCOUNT-OWNER"]
-    },
-    {
-      "name": "read-message",
-      "args": [],
-      "type": "read",
-      "description": ""
-    }
-  ]
+  "module": "simple-vote",
+  "functions": []
 }

@@ -10,11 +10,12 @@
   "files": [
     "dist/",
     "template/",
+    "contract-templates/",
     "package.json",
     "README.md"
   ],
   "scripts": {
-    "build": "tsup bin/index.ts --out-dir dist --format esm && cp -r template dist/",
+    "build": "tsup bin/index.ts --out-dir dist --format esm && cp -r template dist/ && cp -r contract-templates dist/",
     "start": "node dist/index.js"
   },
   "dependencies": {

@@ -68,6 +68,7 @@ This uses the Kadena CLI to:
 
 - Generate a keypair (saved as `testing-account.yaml` by default)
 - Create an account alias and fund it on devnet chain 0
+- Automatically save the public and private keys to `frontend/.env.local` for contract interactions
 
 4. Deploy the example contract and generate frontend config
 

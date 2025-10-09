@@ -25,7 +25,9 @@ interface ModuleConfig {
 const parseFunctionLine = (
   line: string
 ): { name: string; args: Arg[] } | null => {
-  const defunMatch = line.match(/\(defun\s+([a-zA-Z0-9\-]+)\s*\(([^)]*)\)/);
+  const defunMatch = line.match(
+    /\(defun\s+([a-zA-Z0-9\-]+)(?::[^\s(]+)?\s*\(([^)]*)\)/
+  );
   if (!defunMatch) return null;
   const name = defunMatch[1];
   const argsRaw = defunMatch[2] || "";
@@ -41,7 +43,11 @@ const parseFunctionLine = (
 };
 
 const inferFunctionType = (block: string): "read" | "write" => {
-  return /write|with-capability|enforce-keyset/.test(block) ? "write" : "read";
+  return /\b(write|insert|update|delete|with-capability|enforce-keyset)\b/.test(
+    block
+  )
+    ? "write"
+    : "read";
 };
 
 const extractDescription = (lines: string[], index: number): string => {

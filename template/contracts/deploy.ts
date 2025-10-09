@@ -12,7 +12,6 @@ import {
 } from "@kadena/client";
 import type { ChainId, ICommand } from "@kadena/client";
 import { execSync } from "child_process";
-import { CLIENT_RENEG_LIMIT } from "tls";
 
 interface AccountConfig {
   publicKey: string;
